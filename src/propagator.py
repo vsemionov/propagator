@@ -166,8 +166,8 @@ def step_tbc(k, field):
 
     for n, rv in enumerate(resvecs.T):
         diagb = lxab[1]
-        tbc_x_low = calc_tbc(field[1, n], field[0, n]);
-        tbc_x_high = calc_tbc(field[-2, n], field[-1, n]);
+        tbc_x_low = calc_tbc(field[1, n], field[0, n])
+        tbc_x_high = calc_tbc(field[-2, n], field[-1, n])
         diagb[0] = (B + 2.0 * Ax) - (Ax * tbc_x_low)
         diagb[-1] = (B + 2.0 * Ax) - (Ax * tbc_x_high)
         U = solve_banded((1, 1), lxab, rv)
@@ -194,8 +194,8 @@ def step_tbc(k, field):
 
     for m, rv in enumerate(resvecs):
         diagb = lyab[1]
-        tbc_y_low = calc_tbc(field[m, 1], field[m, 0]);
-        tbc_y_high = calc_tbc(field[m, -2], field[m, -1]);
+        tbc_y_low = calc_tbc(tmp_field[m, 1], tmp_field[m, 0])
+        tbc_y_high = calc_tbc(tmp_field[m, -2], tmp_field[m, -1])
         diagb[0] = (B + 2.0 * Ay) - (Ay * tbc_y_low)
         diagb[-1] = (B + 2.0 * Ay) - (Ay * tbc_y_high)
         U = solve_banded((1, 1), lyab, rv)
