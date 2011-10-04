@@ -108,14 +108,11 @@ def step_reflect(k, field):
         diagc = -Ax * ones
         xab = np.matrix([diaga, diagb, diagc])
 
-    for n in range(county):
-        resvec = (B - 2.0 * Ay) * field[:, n]
-        if n > 0:
-            resvec += Ay * field[:, n-1]
-        if n < (county - 1):
-            resvec += Ay * field[:, n+1]
-
-        U = solve_banded((1, 1), xab, resvec)
+    resvecs = (B - 2.0 * Ay) * field
+    resvecs[:, 1:] += Ay * field[:, :-1]
+    resvecs[:, :-1] += Ay * field[:, 1:]
+    for n, rv in enumerate(resvecs.T):
+        U = solve_banded((1, 1), xab, rv)
         tmp_field[:, n] = U
 
     global yab
@@ -126,15 +123,12 @@ def step_reflect(k, field):
         diagc = -Ay * ones
         yab = np.matrix([diaga, diagb, diagc])
 
-    for m in range(countx):
-        resvec = (B - 2.0 * Ax) * tmp_field[m]
-        if m > 0:
-            resvec += Ax * tmp_field[m-1]
-        if m < (countx - 1):
-            resvec += Ax * tmp_field[m+1]
-
-        U = solve_banded((1, 1), yab, resvec)
-        field[m] = U
+    resvecs = (B - 2.0 * Ax) * field
+    resvecs[1:] += Ax * field[:-1]
+    resvecs[:-1] += Ax * field[1:]
+    for m, rv in enumerate(resvecs):
+        U = solve_banded((1, 1), yab, rv)
+        tmp_field[m] = U
 
     return field
 
@@ -164,6 +158,10 @@ def propagate(method):
     for k in range(countz):
         field = step(k, field)
 
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_wireframe(XX, YY, np.absolute(field) ** 2)
+    plt.show()
 
 init_globals()
 init_dir()
