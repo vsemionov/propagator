@@ -84,7 +84,7 @@ def gaussian(z):
 
 def calc_tbc(u1, u2):
     k = -(1j / dx) * np.log(u2 / u1)
-    km = np.where(k.real > 0, k, 1j * k.imag)
+    km = np.maximum(k.real, 0) + 1j * k.imag
     tbc = np.exp(1j * dx * km)
     return tbc
 
