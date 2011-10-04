@@ -100,10 +100,13 @@ def step_reflect(k, field):
     Ay = A / dy2
     B = 2.0 / dz
 
-    ones = np.ones(countx)
-    diaga = -Ax * ones
-    diagb = (B + 2.0 * Ax) * ones
-    diagc = -Ax * ones
+    global xab
+    if k == 0:
+        ones = np.ones(countx)
+        diaga = -Ax * ones
+        diagb = (B + 2.0 * Ax) * ones
+        diagc = -Ax * ones
+        xab = np.matrix([diaga, diagb, diagc])
 
     for n in range(county):
         resvec = (B - 2.0 * Ay) * field[:, n]
@@ -112,13 +115,16 @@ def step_reflect(k, field):
         if n < (county - 1):
             resvec += Ay * field[:, n+1]
 
-        U = solve_tridiag(diaga, diagb, diagc, resvec)
+        U = solve_banded((1, 1), xab, resvec)
         tmp_field[:, n] = U
 
-    ones = np.ones(county)
-    diaga = -Ay * ones
-    diagb = (B + 2.0 * Ay) * ones
-    diagc = -Ay * ones
+    global yab
+    if k == 0:
+        ones = np.ones(county)
+        diaga = -Ay * ones
+        diagb = (B + 2.0 * Ay) * ones
+        diagc = -Ay * ones
+        yab = np.matrix([diaga, diagb, diagc])
 
     for m in range(countx):
         resvec = (B - 2.0 * Ax) * tmp_field[m]
@@ -127,7 +133,7 @@ def step_reflect(k, field):
         if m < (countx - 1):
             resvec += Ax * tmp_field[m+1]
 
-        U = solve_tridiag(diaga, diagb, diagc, resvec)
+        U = solve_banded((1, 1), yab, resvec)
         field[m] = U
 
     return field
@@ -152,16 +158,11 @@ def init_field():
     return field
 
 def propagate(method):
-    init_dir(method)
+    #init_dir(method)
     step = getattr(sys.modules[__name__], "step_" + method)
     field = init_field()
     for k in range(countz):
         field = step(k, field)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.plot_wireframe(XX, YY, np.absolute(field) ** 2)
-    plt.show()
 
 
 init_globals()
