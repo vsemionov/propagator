@@ -119,11 +119,11 @@ def step_reflect(k, field):
     diagc = -Ay * np.ones(county)
 
     for m in range(countx):
-        resvec = (B - 2.0 * Ax) * field[m]
+        resvec = (B - 2.0 * Ax) * tmp_field[m]
         if m > 0:
-            resvec += Ax * field[m-1]
+            resvec += Ax * tmp_field[m-1]
         if m < (countx - 1):
-            resvec += Ax * field[m+1]
+            resvec += Ax * tmp_field[m+1]
 
         U = solve_tridiag(diaga, diagb, diagc, resvec)
         field[m] = U
