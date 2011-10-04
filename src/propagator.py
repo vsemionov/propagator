@@ -65,10 +65,6 @@ w02 = w0 * w0
 # end dependent config params
 
 
-def solve_tridiag(a, b, c, r):
-    ab = np.matrix([a, b, c])
-    return solve_banded((1, 1), ab, r)
-
 def gaussian(z):
     z2 = z * z
 
@@ -123,12 +119,12 @@ def step_reflect(k, field):
         diagc = -Ay * ones
         yab = np.matrix([diaga, diagb, diagc])
 
-    resvecs = (B - 2.0 * Ax) * field
-    resvecs[1:] += Ax * field[:-1]
-    resvecs[:-1] += Ax * field[1:]
+    resvecs = (B - 2.0 * Ax) * tmp_field
+    resvecs[1:] += Ax * tmp_field[:-1]
+    resvecs[:-1] += Ax * tmp_field[1:]
     for m, rv in enumerate(resvecs):
         U = solve_banded((1, 1), yab, rv)
-        tmp_field[m] = U
+        field[m] = U
 
     return field
 
