@@ -204,11 +204,15 @@ def step_tbc(k, field):
     return field
 
 def init_globals():
-    global X, Y, XX, YY, R2
+    global X, Y, Z
     X = np.linspace(lowx, highx, countx, retstep=False)
     Y = np.linspace(lowy, highy, county, retstep=False)
-    XX, YY = np.meshgrid(X, Y)
-    R2 = (XX * XX) + (YY * YY)
+    Z = np.linspace(lowz, highz, countz, retstep=False)
+    global XY, YX, R2
+    XY, YX = np.meshgrid(X, Y)
+    R2 = (XY * XY) + (YX * YX)
+    global XZ, ZX
+    XZ, ZX = np.meshgrid(X, Z)
 
 def init_dir(name=None):
     if name is None:
@@ -225,13 +229,20 @@ def init_field():
 def propagate(method):
     init_dir(method)
     step = getattr(sys.modules[__name__], "step_" + method)
+    vals = np.zeros((countz, countx), np.complex)
     field = init_field()
+    vals[0] = field[:, county/2]
     for k in range(1, countz):
         field = step(k, field)
+        vals[k] = field[:, county/2]
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.plot_wireframe(XX, YY, np.absolute(field) ** 2)
+    vals = (np.absolute(vals) ** 2)[::countz_scale, ::countx_scale]
+    zx = ZX[::countz_scale, ::countx_scale]
+    xz = XZ[::countz_scale, ::countx_scale]
+    ax.plot_wireframe(zx, xz, vals)
+    plt.title(method)
     plt.show()
 
 init_globals()
