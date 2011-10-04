@@ -148,7 +148,7 @@ def init_field():
     return field
 
 def propagate(method):
-    #init_dir(method)
+    init_dir(method)
     step = getattr(sys.modules[__name__], "step_" + method)
     field = init_field()
     for k in range(countz):
