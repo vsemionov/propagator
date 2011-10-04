@@ -6,7 +6,7 @@ import os
 import math
 
 import numpy as np
-import scipy as sp
+from scipy.linalg import solve_banded
 
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
@@ -65,6 +65,10 @@ w02 = w0 * w0
 # end dependent config params
 
 
+def solve_tridiag(a, b, c, r):
+    ab = np.matrix([a, b, c])
+    return solve_banded((1, 1), ab, r)
+
 def gaussian(z):
     z2 = z * z
 
@@ -89,14 +93,49 @@ def step_analytic(k, field):
     return gaussian(lowz + k * dz)
 
 def step_reflect(k, field):
-    pass
+    tmp_field = field.copy()
+
+    A = 1j / (2.0 * K)
+    Ax = A / dx2
+    Ay = A / dy2
+    B = 2.0 / dz
+
+    diaga = -Ax * np.ones(countx)
+    diagb = (B + 2.0 * Ax) * np.ones(countx)
+    diagc = -Ax * np.ones(countx)
+
+    for n in range(county):
+        resvec = (B - 2.0 * Ay) * field[:, n]
+        if n > 0:
+            resvec += Ay * field[:, n-1]
+        if n < (county - 1):
+            resvec += Ay * field[:, n+1]
+
+        U = solve_tridiag(diaga, diagb, diagc, resvec)
+        tmp_field[:, n] = U
+
+    diaga = -Ay * np.ones(county)
+    diagb = (B + 2.0 * Ay) * np.ones(county)
+    diagc = -Ay * np.ones(county)
+
+    for m in range(countx):
+        resvec = (B - 2.0 * Ax) * field[m]
+        if m > 0:
+            resvec += Ax * field[m-1]
+        if m < (countx - 1):
+            resvec += Ax * field[m+1]
+
+        U = solve_tridiag(diaga, diagb, diagc, resvec)
+        field[m] = U
+
+    return field
 
 def init_globals():
     global X, Y, XX, YY, R2
     X = np.linspace(lowx, highx, countx, retstep=False)
     Y = np.linspace(lowy, highy, county, retstep=False)
     XX, YY = np.meshgrid(X, Y)
-    R2 = XX ** 2 + YY ** 2
+    R2 = (XX * XX) + (YY * YY)
 
 def init_dir(name=None):
     if name is None:
@@ -117,6 +156,13 @@ def propagate(method):
     for k in range(countz):
         field = step(k, field)
 
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.plot_wireframe(XX, YY, np.absolute(field) ** 2)
+    plt.show()
+
+
 init_globals()
 init_dir()
 propagate("analytic")
+propagate("reflect")
