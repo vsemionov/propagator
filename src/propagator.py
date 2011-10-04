@@ -100,9 +100,10 @@ def step_reflect(k, field):
     Ay = A / dy2
     B = 2.0 / dz
 
-    diaga = -Ax * np.ones(countx)
-    diagb = (B + 2.0 * Ax) * np.ones(countx)
-    diagc = -Ax * np.ones(countx)
+    ones = np.ones(countx)
+    diaga = -Ax * ones
+    diagb = (B + 2.0 * Ax) * ones
+    diagc = -Ax * ones
 
     for n in range(county):
         resvec = (B - 2.0 * Ay) * field[:, n]
@@ -114,9 +115,10 @@ def step_reflect(k, field):
         U = solve_tridiag(diaga, diagb, diagc, resvec)
         tmp_field[:, n] = U
 
-    diaga = -Ay * np.ones(county)
-    diagb = (B + 2.0 * Ay) * np.ones(county)
-    diagc = -Ay * np.ones(county)
+    ones = np.ones(county)
+    diaga = -Ay * ones
+    diagb = (B + 2.0 * Ay) * ones
+    diagc = -Ay * ones
 
     for m in range(countx):
         resvec = (B - 2.0 * Ax) * tmp_field[m]
