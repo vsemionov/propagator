@@ -886,15 +886,15 @@ void propagate(void (*step_func)(int k), string suffix)
 	init(suffix);
 	set_field();
 
-	//solve_analytic(0, field_exact);
+	solve_analytic(0, field_exact);
 
-	//write_field_xy(xy_init_out);
-	//write_field_x(x_init_out);
-	//write_field_y(y_init_out);
-	//write_field_zx(zx_out, 0, true);
-	//write_field_zy(zy_out, 0, true);
-	//write_field_z(z_out, 0, true);
-	//write_power(power_out, 0, true);
+	write_field_xy(xy_init_out);
+	write_field_x(x_init_out);
+	write_field_y(y_init_out);
+	write_field_zx(zx_out, 0, true);
+	write_field_zy(zy_out, 0, true);
+	write_field_z(z_out, 0, true);
+	write_power(power_out, 0, true);
 
 	for (int k = 1; k < countz; k++)
 	{
@@ -902,25 +902,25 @@ void propagate(void (*step_func)(int k), string suffix)
 
 		solve_analytic(k, field_exact);
 
-		//write_field_zx(zx_out, k, false);
-		//write_field_zy(zy_out, k, false);
-		//write_field_z(z_out, k, false);
-		//write_power(power_out, k, false);
+		write_field_zx(zx_out, k, false);
+		write_field_zy(zy_out, k, false);
+		write_field_z(z_out, k, false);
+		write_power(power_out, k, false);
 	}
 
-	//write_field_xy(xy_final_out);
-	//write_field_x(x_final_out);
-	//write_field_y(y_final_out);
+	write_field_xy(xy_final_out);
+	write_field_x(x_final_out);
+	write_field_y(y_final_out);
 
 	cleanup();
 }
 
 int main()
 {
-	for (int i = 0; i < 10; i++)
-	{
-		propagate(step_analytic, "analytic");
-		propagate(step_reflect, "reflect");
-	}
+	propagate(step_analytic, "analytic");
+	propagate(step_reflect, "reflect");
+	propagate(step_tbc, "tbc");
+	propagate(step_pml_analytic, "pml_analytic");
+	propagate(step_pml_discrete, "pml_discrete");
 	return 0;
 }
