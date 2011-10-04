@@ -1,3 +1,5 @@
 syntax: glob
 .project
 .pydevproject
+src/propagator
+src/propagator.exe
