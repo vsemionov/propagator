@@ -33,8 +33,6 @@ wavelen = 632.8e-9
 
 beamwidth = 0.4e-3
 
-tbc_min = 1.0e-9
-
 sigma_max = 3.0e16 # max value at borders
 sigma_power = 2 # exponent of the absorption profile
 pml_border_size = 0.046875 # border size, relative to window size
@@ -74,7 +72,6 @@ def gaussian(z):
     wz = w0 * math.sqrt(1 + z2 / zR2)
     wz2 = wz * wz
 
-    #Rz = z * (1 + zR2 / z2)
     Rz_inv = z / (z2 + zR2)
 
     zeta = math.atan(z / zR)
@@ -84,6 +81,12 @@ def gaussian(z):
 
     field = amplitude * (w0 / wz) * np.exp(exparg)
     return field
+
+def calc_tbc(u1, u2):
+    k = -(1j / dx) * np.log(u2 / u1)
+    km = np.where(k.real > 0, k, 1j * k.imag)
+    tbc = np.exp(1j * dx * km)
+    return tbc
 
 def step_analytic(k, field):
     return gaussian(lowz + k * dz)
@@ -97,33 +100,105 @@ def step_reflect(k, field):
     B = 2.0 / dz
 
     global xab
-    if k == 0:
+    if k == 1:
         ones = np.ones(countx)
         diaga = -Ax * ones
         diagb = (B + 2.0 * Ax) * ones
         diagc = -Ax * ones
         xab = np.matrix([diaga, diagb, diagc])
 
+    lxab = xab
+
     resvecs = (B - 2.0 * Ay) * field
     resvecs[:, 1:] += Ay * field[:, :-1]
     resvecs[:, :-1] += Ay * field[:, 1:]
+
     for n, rv in enumerate(resvecs.T):
-        U = solve_banded((1, 1), xab, rv)
+        U = solve_banded((1, 1), lxab, rv)
         tmp_field[:, n] = U
 
     global yab
-    if k == 0:
+    if k == 1:
         ones = np.ones(county)
         diaga = -Ay * ones
         diagb = (B + 2.0 * Ay) * ones
         diagc = -Ay * ones
         yab = np.matrix([diaga, diagb, diagc])
 
+    lyab = yab
+
     resvecs = (B - 2.0 * Ax) * tmp_field
     resvecs[1:] += Ax * tmp_field[:-1]
     resvecs[:-1] += Ax * tmp_field[1:]
+
     for m, rv in enumerate(resvecs):
-        U = solve_banded((1, 1), yab, rv)
+        U = solve_banded((1, 1), lyab, rv)
+        field[m] = U
+
+    return field
+
+def step_tbc(k, field):
+    tmp_field = field.copy()
+
+    A = 1j / (2.0 * K)
+    Ax = A / dx2
+    Ay = A / dy2
+    B = 2.0 / dz
+
+    global xab
+    if k == 1:
+        ones = np.ones(countx)
+        diaga = -Ax * ones
+        diagb = (B + 2.0 * Ax) * ones
+        diagc = -Ax * ones
+        xab = np.matrix([diaga, diagb, diagc])
+
+    lxab = xab.copy()
+
+    resvecs = (B - 2.0 * Ay) * field
+    resvecs[:, 1:] += Ay * field[:, :-1]
+    resvecs[:, :-1] += Ay * field[:, 1:]
+
+    tbc_y_low = calc_tbc(field[:, 1], field[:, 0])
+    tbc_y_high = calc_tbc(field[:, -2], field[:, -1])
+    resvecs[:, 0] += Ay * tbc_y_low * field[:, 0]
+    resvecs[:, -1] += Ay * tbc_y_high * field[:, -1]
+
+    for n, rv in enumerate(resvecs.T):
+        diagb = lxab[1]
+        tbc_x_low = calc_tbc(field[1, n], field[0, n]);
+        tbc_x_high = calc_tbc(field[-2, n], field[-1, n]);
+        diagb[0] = (B + 2.0 * Ax) - (Ax * tbc_x_low)
+        diagb[-1] = (B + 2.0 * Ax) - (Ax * tbc_x_high)
+        U = solve_banded((1, 1), lxab, rv)
+        tmp_field[:, n] = U
+
+    global yab
+    if k == 1:
+        ones = np.ones(county)
+        diaga = -Ay * ones
+        diagb = (B + 2.0 * Ay) * ones
+        diagc = -Ay * ones
+        yab = np.matrix([diaga, diagb, diagc])
+
+    lyab = yab.copy()
+
+    resvecs = (B - 2.0 * Ax) * tmp_field
+    resvecs[1:] += Ax * tmp_field[:-1]
+    resvecs[:-1] += Ax * tmp_field[1:]
+
+    tbc_x_low = calc_tbc(tmp_field[1], tmp_field[0])
+    tbc_x_high = calc_tbc(tmp_field[-2], tmp_field[-1])
+    resvecs[0] += Ax * tbc_x_low * tmp_field[0]
+    resvecs[-1] += Ax * tbc_x_high * tmp_field[-1]
+
+    for m, rv in enumerate(resvecs):
+        diagb = lyab[1]
+        tbc_y_low = calc_tbc(field[m, 1], field[m, 0]);
+        tbc_y_high = calc_tbc(field[m, -2], field[m, -1]);
+        diagb[0] = (B + 2.0 * Ay) - (Ay * tbc_y_low)
+        diagb[-1] = (B + 2.0 * Ay) - (Ay * tbc_y_high)
+        U = solve_banded((1, 1), lyab, rv)
         field[m] = U
 
     return field
@@ -151,7 +226,7 @@ def propagate(method):
     init_dir(method)
     step = getattr(sys.modules[__name__], "step_" + method)
     field = init_field()
-    for k in range(countz):
+    for k in range(1, countz):
         field = step(k, field)
 
     fig = plt.figure()
@@ -163,3 +238,4 @@ init_globals()
 init_dir()
 propagate("analytic")
 propagate("reflect")
+propagate("tbc")
