@@ -111,22 +111,22 @@ class propagator_reflect:
         lxab = self.xab
 
         resvecs = (self.B - 2.0 * self.Ay) * field
-        resvecs[:, 1:] += self.Ay * field[:, :-1]
-        resvecs[:, :-1] += self.Ay * field[:, 1:]
+        resvecs[1:] += self.Ay * field[:-1]
+        resvecs[:-1] += self.Ay * field[1:]
 
-        for n, rv in enumerate(resvecs.T):
+        for n, rv in enumerate(resvecs):
             U = solve_banded((1, 1), lxab, rv)
-            tmp_field[:, n] = U
+            tmp_field[n] = U
 
         lyab = self.yab
 
         resvecs = (self.B - 2.0 * self.Ax) * tmp_field
-        resvecs[1:] += self.Ax * tmp_field[:-1]
-        resvecs[:-1] += self.Ax * tmp_field[1:]
+        resvecs[:, 1:] += self.Ax * tmp_field[:, :-1]
+        resvecs[:, :-1] += self.Ax * tmp_field[:, 1:]
 
-        for m, rv in enumerate(resvecs):
+        for m, rv in enumerate(resvecs.T):
             U = solve_banded((1, 1), lyab, rv)
-            field[m] = U
+            field[:, m] = U
 
         return field
 
@@ -162,42 +162,42 @@ class propagator_tbc:
         lxab = self.xab.copy()
 
         resvecs = (self.B - 2.0 * self.Ay) * field
-        resvecs[:, 1:] += self.Ay * field[:, :-1]
-        resvecs[:, :-1] += self.Ay * field[:, 1:]
+        resvecs[1:] += self.Ay * field[:-1]
+        resvecs[:-1] += self.Ay * field[1:]
 
-        tbc_y_low = self.__class__.calc_tbc(field[:, 1], field[:, 0])
-        tbc_y_high = self.__class__.calc_tbc(field[:, -2], field[:, -1])
-        resvecs[:, 0] += self.Ay * tbc_y_low * field[:, 0]
-        resvecs[:, -1] += self.Ay * tbc_y_high * field[:, -1]
+        tbc_y_low = self.__class__.calc_tbc(field[1], field[0])
+        tbc_y_high = self.__class__.calc_tbc(field[-2], field[-1])
+        resvecs[0] += self.Ay * tbc_y_low * field[0]
+        resvecs[-1] += self.Ay * tbc_y_high * field[-1]
 
-        for n, rv in enumerate(resvecs.T):
+        for n, rv in enumerate(resvecs):
             diagb = lxab[1]
-            tbc_x_low = self.__class__.calc_tbc(field[1, n], field[0, n])
-            tbc_x_high = self.__class__.calc_tbc(field[-2, n], field[-1, n])
+            tbc_x_low = self.__class__.calc_tbc(field[n, 1], field[n, 0])
+            tbc_x_high = self.__class__.calc_tbc(field[n, -2], field[n, -1])
             diagb[0] = (self.B + 2.0 * self.Ax) - (self.Ax * tbc_x_low)
             diagb[-1] = (self.B + 2.0 * self.Ax) - (self.Ax * tbc_x_high)
             U = solve_banded((1, 1), lxab, rv)
-            tmp_field[:, n] = U
+            tmp_field[n] = U
 
         lyab = self.yab.copy()
 
         resvecs = (self.B - 2.0 * self.Ax) * tmp_field
-        resvecs[1:] += self.Ax * tmp_field[:-1]
-        resvecs[:-1] += self.Ax * tmp_field[1:]
+        resvecs[:, 1:] += self.Ax * tmp_field[:, :-1]
+        resvecs[:, :-1] += self.Ax * tmp_field[:, 1:]
 
-        tbc_x_low = self.__class__.calc_tbc(tmp_field[1], tmp_field[0])
-        tbc_x_high = self.__class__.calc_tbc(tmp_field[-2], tmp_field[-1])
-        resvecs[0] += self.Ax * tbc_x_low * tmp_field[0]
-        resvecs[-1] += self.Ax * tbc_x_high * tmp_field[-1]
+        tbc_x_low = self.__class__.calc_tbc(tmp_field[:, 1], tmp_field[:, 0])
+        tbc_x_high = self.__class__.calc_tbc(tmp_field[:, -2], tmp_field[:, -1])
+        resvecs[:, 0] += self.Ax * tbc_x_low * tmp_field[:, 0]
+        resvecs[:, -1] += self.Ax * tbc_x_high * tmp_field[:, -1]
 
-        for m, rv in enumerate(resvecs):
+        for m, rv in enumerate(resvecs.T):
             diagb = lyab[1]
-            tbc_y_low = self.__class__.calc_tbc(tmp_field[m, 1], tmp_field[m, 0])
-            tbc_y_high = self.__class__.calc_tbc(tmp_field[m, -2], tmp_field[m, -1])
+            tbc_y_low = self.__class__.calc_tbc(tmp_field[1, m], tmp_field[0, m])
+            tbc_y_high = self.__class__.calc_tbc(tmp_field[-2, m], tmp_field[-1, m])
             diagb[0] = (self.B + 2.0 * self.Ay) - (self.Ay * tbc_y_low)
             diagb[-1] = (self.B + 2.0 * self.Ay) - (self.Ay * tbc_y_high)
             U = solve_banded((1, 1), lyab, rv)
-            field[m] = U
+            field[:, m] = U
 
         return field
 
@@ -233,16 +233,16 @@ class propagator_pml:
         self.f = 1.0 / ((1.0 + 1j * self.sigmay / omega) * (1.0 + 1j * self.sigmay_post / omega))
         self.e = -(self.d + self.f)
 
-        diaga = -self.Ax * self.a[:-1, 0]
+        diaga = -self.Ax * self.a[0, :-1]
         diaga = np.insert(diaga, 0, 0.0)
-        diagb = self.B - self.Ax * self.b[:, 0]
-        diagc = -self.Ax * self.c[:, 0]
+        diagb = self.B - self.Ax * self.b[0]
+        diagc = -self.Ax * self.c[0]
         self.xab = np.array([diaga, diagb, diagc])
 
-        diaga = -self.Ay * self.d[0, :-1]
+        diaga = -self.Ay * self.d[:-1, 0]
         diaga = np.insert(diaga, 0, 0.0)
-        diagb = self.B - self.Ay * self.e[0]
-        diagc = -self.Ay * self.f[0]
+        diagb = self.B - self.Ay * self.e[:, 0]
+        diagc = -self.Ay * self.f[:, 0]
         self.yab = np.array([diaga, diagb, diagc])
 
     @staticmethod
@@ -269,22 +269,22 @@ class propagator_pml:
         lxab = self.xab
 
         resvecs = (self.B + self.Ay * self.e) * field
-        resvecs[:, 1:] += self.Ay * self.d[:, 1:] * field[:, :-1]
-        resvecs[:, :-1] += self.Ay * self.f[:, :-1] * field[:, 1:]
+        resvecs[1:] += self.Ay * self.d[1:] * field[:-1]
+        resvecs[:-1] += self.Ay * self.f[:-1] * field[1:]
 
-        for n, rv in enumerate(resvecs.T):
+        for n, rv in enumerate(resvecs):
             U = solve_banded((1, 1), lxab, rv)
-            tmp_field[:, n] = U
+            tmp_field[n] = U
 
         lyab = self.yab
 
         resvecs = (self.B + self.Ax * self.b) * tmp_field
-        resvecs[1:] += self.Ax * self.a[1:] * tmp_field[:-1]
-        resvecs[:-1] += self.Ax * self.c[:-1] * tmp_field[1:]
+        resvecs[:, 1:] += self.Ax * self.a[:, 1:] * tmp_field[:, :-1]
+        resvecs[:, :-1] += self.Ax * self.c[:, :-1] * tmp_field[:, 1:]
 
-        for m, rv in enumerate(resvecs):
+        for m, rv in enumerate(resvecs.T):
             U = solve_banded((1, 1), lyab, rv)
-            field[m] = U
+            field[:, m] = U
 
         return field
 
@@ -316,10 +316,10 @@ def propagate(name):
     propagator = getattr(sys.modules[__name__], "propagator_" + name)()
     vals = np.zeros((countz, countx), np.complex)
     field = init_field()
-    vals[0] = field[:, county/2]
+    vals[0] = field[county/2]
     for k in range(1, countz):
         field = propagator.step(k, field)
-        vals[k] = field[:, county/2]
+        vals[k] = field[county/2]
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
