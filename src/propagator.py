@@ -266,7 +266,7 @@ class propagator_pml:
 
         lxab = self.xab
 
-        resvecs = self.B + self.Ay * self.e * field
+        resvecs = (self.B + self.Ay * self.e) * field
         resvecs[:, 1:] += self.Ay * self.d[:, 1:] * field[:, :-1]
         resvecs[:, :-1] += self.Ay * self.f[:, :-1] * field[:, 1:]
 
@@ -276,7 +276,7 @@ class propagator_pml:
 
         lyab = self.yab
 
-        resvecs = self.B + self.Ax * self.b * tmp_field
+        resvecs = (self.B + self.Ax * self.b) * tmp_field
         resvecs[1:] += self.Ax * self.a[1:] * tmp_field[:-1]
         resvecs[:-1] += self.Ax * self.c[:-1] * tmp_field[1:]
 
