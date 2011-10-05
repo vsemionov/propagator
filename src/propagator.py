@@ -88,6 +88,23 @@ def calc_tbc(u1, u2):
     tbc = np.exp(1j * dx * km)
     return tbc
 
+def calc_sigma(q, qmin, qmax):
+    def calc_pml_depth(q, qmin, qmax):
+        pml_width = (qmax - qmin) * pml_border_size
+        qlow = qmin + pml_width
+        qhigh = qmax - pml_width
+
+        d = np.where(q <= qlow, (q - qlow) / pml_width, 0.0)
+        d = np.where(q >= qhigh, (q - qhigh) / pml_width, d)
+
+        return d
+
+    d = calc_pml_depth(q, qmin, qmax)
+
+    s = np.where(d != 0.0, np.fabs(d) ** sigma_power, 0.0)
+
+    return s * sigma_max
+
 class propagator_analytic:
     def step(self, k, field):
         return gaussian(lowz + k * dz)
