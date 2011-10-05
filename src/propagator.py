@@ -218,6 +218,31 @@ class propagator_pml:
         diagc = -self.Ay * ones
         self.yab = np.matrix([diaga, diagb, diagc])
 
+        X_pre = np.linspace(lowx - dx/2, highx - dx/2, countx, retstep=False)
+        Y_pre = np.linspace(lowy - dy/2, highy - dy/2, county, retstep=False)
+        XY_pre, YX_pre = np.meshgrid(X_pre, Y_pre)
+
+        X_post = np.linspace(lowx + dx/2, highx + dx/2, countx, retstep=False)
+        Y_post = np.linspace(lowy + dy/2, highy + dy/2, county, retstep=False)
+        XY_post, YX_post = np.meshgrid(X_post, Y_post)
+
+        self.sigmax = self.__class__.calc_sigma(XY, lowx, highx)
+        self.sigmay = self.__class__.calc_sigma(YX, lowy, highy)
+
+        self.sigmax_pre = self.__class__.calc_sigma(XY_pre, lowx, highx)
+        self.sigmay_pre = self.__class__.calc_sigma(YX_pre, lowy, highy)
+
+        self.sigmax_post = self.__class__.calc_sigma(XY_post, lowx, highx)
+        self.sigmay_post = self.__class__.calc_sigma(YX_post, lowy, highy)
+
+        self.d = 1.0 / ((1.0 + 1j * self.sigmay / omega) * (1.0 + 1j * self.sigmay_pre / omega))
+        self.f = 1.0 / ((1.0 + 1j * self.sigmay / omega) * (1.0 + 1j * self.sigmay_post / omega))
+        self.e = -(self.d + self.f)
+
+        self.a = 1.0 / ((1.0 + 1j * self.sigmax / omega) * (1.0 + 1j * self.sigmax_pre / omega))
+        self.c = 1.0 / ((1.0 + 1j * self.sigmax / omega) * (1.0 + 1j * self.sigmax_post / omega))
+        self.b = -(self.a + self.c)
+
     @staticmethod
     def calc_sigma(q, qmin, qmax):
         def calc_pml_depth(q, qmin, qmax):
@@ -235,6 +260,31 @@ class propagator_pml:
         s = np.where(d != 0.0, np.fabs(d) ** sigma_power, 0.0)
 
         return s * sigma_max
+
+    def step(self, k, field):
+        tmp_field = field.copy()
+
+        lxab = self.xab
+
+        resvecs = (self.B - 2.0 * self.Ay) * field
+        resvecs[:, 1:] += self.Ay * field[:, :-1]
+        resvecs[:, :-1] += self.Ay * field[:, 1:]
+
+        for n, rv in enumerate(resvecs.T):
+            U = solve_banded((1, 1), lxab, rv)
+            tmp_field[:, n] = U
+
+        lyab = self.yab
+
+        resvecs = (self.B - 2.0 * self.Ax) * tmp_field
+        resvecs[1:] += self.Ax * tmp_field[:-1]
+        resvecs[:-1] += self.Ax * tmp_field[1:]
+
+        for m, rv in enumerate(resvecs):
+            U = solve_banded((1, 1), lyab, rv)
+            field[m] = U
+
+        return field
 
 def init_globals():
     global X, Y, Z
