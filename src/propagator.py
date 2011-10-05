@@ -306,29 +306,21 @@ def init_dir(name=None):
         dirname = os.path.join(output_dir, name)
     if not os.path.isdir(dirname):
         os.mkdir(dirname)
+    return dirname
 
 def init_field():
     field = gaussian(lowz)
     return field
 
 def propagate(name):
-    init_dir(name)
-    propagator = getattr(sys.modules[__name__], "propagator_" + name)()
-    vals = np.zeros((countz, countx), np.complex)
-    field = init_field()
-    vals[0] = field[county/2]
-    for k in range(1, countz):
-        field = propagator.step(k, field)
-        vals[k] = field[county/2]
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    vals = (np.absolute(vals) ** 2)[::countz_scale, ::countx_scale]
-    zx = ZX[::countz_scale, ::countx_scale]
-    xz = XZ[::countz_scale, ::countx_scale]
-    ax.plot_wireframe(zx, xz, vals)
-    plt.title(name)
-    plt.show()
+    dirname = init_dir(name)
+    with open(os.path.join(dirname, name + ".dat"), "w") as outfile:
+        propagator = getattr(sys.modules[__name__], "propagator_" + name)()
+        field = init_field()
+        np.savetxt(outfile, field.view(float))
+        for k in range(1, countz):
+            field = propagator.step(k, field)
+            np.savetxt(outfile, field.view(float))
 
 init_globals()
 init_dir()
