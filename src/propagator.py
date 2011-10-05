@@ -82,29 +82,6 @@ def gaussian(z):
     field = amplitude * (w0 / wz) * np.exp(exparg)
     return field
 
-def calc_tbc(u1, u2):
-    k = -(1j / dx) * np.log(u2 / u1)
-    km = np.maximum(k.real, 0) + 1j * k.imag
-    tbc = np.exp(1j * dx * km)
-    return tbc
-
-def calc_sigma(q, qmin, qmax):
-    def calc_pml_depth(q, qmin, qmax):
-        pml_width = (qmax - qmin) * pml_border_size
-        qlow = qmin + pml_width
-        qhigh = qmax - pml_width
-
-        d = np.where(q <= qlow, (q - qlow) / pml_width, 0.0)
-        d = np.where(q >= qhigh, (q - qhigh) / pml_width, d)
-
-        return d
-
-    d = calc_pml_depth(q, qmin, qmax)
-
-    s = np.where(d != 0.0, np.fabs(d) ** sigma_power, 0.0)
-
-    return s * sigma_max
-
 class propagator_analytic:
     def step(self, k, field):
         return gaussian(lowz + k * dz)
@@ -172,6 +149,13 @@ class propagator_tbc:
         diagc = -self.Ay * ones
         self.yab = np.matrix([diaga, diagb, diagc])
 
+    @staticmethod
+    def calc_tbc(u1, u2):
+        k = -(1j / dx) * np.log(u2 / u1)
+        km = np.maximum(k.real, 0) + 1j * k.imag
+        tbc = np.exp(1j * dx * km)
+        return tbc
+
     def step(self, k, field):
         tmp_field = field.copy()
 
@@ -181,14 +165,14 @@ class propagator_tbc:
         resvecs[:, 1:] += self.Ay * field[:, :-1]
         resvecs[:, :-1] += self.Ay * field[:, 1:]
 
-        tbc_y_low = calc_tbc(field[:, 1], field[:, 0])
-        tbc_y_high = calc_tbc(field[:, -2], field[:, -1])
+        tbc_y_low = self.__class__.calc_tbc(field[:, 1], field[:, 0])
+        tbc_y_high = self.__class__.calc_tbc(field[:, -2], field[:, -1])
         resvecs[:, 0] += self.Ay * tbc_y_low * field[:, 0]
         resvecs[:, -1] += self.Ay * tbc_y_high * field[:, -1]
 
         for n, rv in enumerate(resvecs.T):
-            tbc_x_low = calc_tbc(field[1, n], field[0, n])
-            tbc_x_high = calc_tbc(field[-2, n], field[-1, n])
+            tbc_x_low = self.__class__.calc_tbc(field[1, n], field[0, n])
+            tbc_x_high = self.__class__.calc_tbc(field[-2, n], field[-1, n])
             lxab[1, 0] = (self.B + 2.0 * self.Ax) - (self.Ax * tbc_x_low)
             lxab[1, -1] = (self.B + 2.0 * self.Ax) - (self.Ax * tbc_x_high)
             U = solve_banded((1, 1), lxab, rv)
@@ -200,20 +184,57 @@ class propagator_tbc:
         resvecs[1:] += self.Ax * tmp_field[:-1]
         resvecs[:-1] += self.Ax * tmp_field[1:]
 
-        tbc_x_low = calc_tbc(tmp_field[1], tmp_field[0])
-        tbc_x_high = calc_tbc(tmp_field[-2], tmp_field[-1])
+        tbc_x_low = self.__class__.calc_tbc(tmp_field[1], tmp_field[0])
+        tbc_x_high = self.__class__.calc_tbc(tmp_field[-2], tmp_field[-1])
         resvecs[0] += self.Ax * tbc_x_low * tmp_field[0]
         resvecs[-1] += self.Ax * tbc_x_high * tmp_field[-1]
 
         for m, rv in enumerate(resvecs):
-            tbc_y_low = calc_tbc(tmp_field[m, 1], tmp_field[m, 0])
-            tbc_y_high = calc_tbc(tmp_field[m, -2], tmp_field[m, -1])
+            tbc_y_low = self.__class__.calc_tbc(tmp_field[m, 1], tmp_field[m, 0])
+            tbc_y_high = self.__class__.calc_tbc(tmp_field[m, -2], tmp_field[m, -1])
             lyab[1, 0] = (self.B + 2.0 * self.Ay) - (self.Ay * tbc_y_low)
             lyab[1, -1] = (self.B + 2.0 * self.Ay) - (self.Ay * tbc_y_high)
             U = solve_banded((1, 1), lyab, rv)
             field[m] = U
 
         return field
+
+class propagator_pml:
+    def __init__(self):
+        self.A = 1j / (2.0 * K)
+        self.Ax = self.A / dx2
+        self.Ay = self.A / dy2
+        self.B = 2.0 / dz
+
+        ones = np.ones(countx)
+        diaga = -self.Ax * ones
+        diagb = (self.B + 2.0 * self.Ax) * ones
+        diagc = -self.Ax * ones
+        self.xab = np.matrix([diaga, diagb, diagc])
+
+        ones = np.ones(county)
+        diaga = -self.Ay * ones
+        diagb = (self.B + 2.0 * self.Ay) * ones
+        diagc = -self.Ay * ones
+        self.yab = np.matrix([diaga, diagb, diagc])
+
+    @staticmethod
+    def calc_sigma(q, qmin, qmax):
+        def calc_pml_depth(q, qmin, qmax):
+            pml_width = (qmax - qmin) * pml_border_size
+            qlow = qmin + pml_width
+            qhigh = qmax - pml_width
+
+            d = np.where(q <= qlow, (q - qlow) / pml_width, 0.0)
+            d = np.where(q >= qhigh, (q - qhigh) / pml_width, d)
+
+            return d
+
+        d = calc_pml_depth(q, qmin, qmax)
+
+        s = np.where(d != 0.0, np.fabs(d) ** sigma_power, 0.0)
+
+        return s * sigma_max
 
 def init_globals():
     global X, Y, Z
