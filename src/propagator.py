@@ -223,13 +223,13 @@ class propagator_pml:
         self.sigmax_post = self.__class__.calc_sigma(XY_post, lowx, highx)
         self.sigmay_post = self.__class__.calc_sigma(YX_post, lowy, highy)
 
-        self.d = 1.0 / ((1.0 + 1j * self.sigmay / omega) * (1.0 + 1j * self.sigmay_pre / omega))
-        self.f = 1.0 / ((1.0 + 1j * self.sigmay / omega) * (1.0 + 1j * self.sigmay_post / omega))
-        self.e = -(self.d + self.f)
-
         self.a = 1.0 / ((1.0 + 1j * self.sigmax / omega) * (1.0 + 1j * self.sigmax_pre / omega))
         self.c = 1.0 / ((1.0 + 1j * self.sigmax / omega) * (1.0 + 1j * self.sigmax_post / omega))
         self.b = -(self.a + self.c)
+
+        self.d = 1.0 / ((1.0 + 1j * self.sigmay / omega) * (1.0 + 1j * self.sigmay_pre / omega))
+        self.f = 1.0 / ((1.0 + 1j * self.sigmay / omega) * (1.0 + 1j * self.sigmay_post / omega))
+        self.e = -(self.d + self.f)
 
         diaga = -self.Ax * self.a[:-1, 0]
         diaga = np.insert(diaga, 0, 0.0)
