@@ -97,13 +97,13 @@ class propagator_reflect:
         diaga = -self.Ax * ones
         diagb = (self.B + 2.0 * self.Ax) * ones
         diagc = -self.Ax * ones
-        self.xab = np.matrix([diaga, diagb, diagc])
+        self.xab = np.array([diaga, diagb, diagc])
 
         ones = np.ones(county)
         diaga = -self.Ay * ones
         diagb = (self.B + 2.0 * self.Ay) * ones
         diagc = -self.Ay * ones
-        self.yab = np.matrix([diaga, diagb, diagc])
+        self.yab = np.array([diaga, diagb, diagc])
 
     def step(self, k, field):
         tmp_field = field.copy()
@@ -141,13 +141,13 @@ class propagator_tbc:
         diaga = -self.Ax * ones
         diagb = (self.B + 2.0 * self.Ax) * ones
         diagc = -self.Ax * ones
-        self.xab = np.matrix([diaga, diagb, diagc])
+        self.xab = np.array([diaga, diagb, diagc])
 
         ones = np.ones(county)
         diaga = -self.Ay * ones
         diagb = (self.B + 2.0 * self.Ay) * ones
         diagc = -self.Ay * ones
-        self.yab = np.matrix([diaga, diagb, diagc])
+        self.yab = np.array([diaga, diagb, diagc])
 
     @staticmethod
     def calc_tbc(u1, u2):
@@ -171,10 +171,11 @@ class propagator_tbc:
         resvecs[:, -1] += self.Ay * tbc_y_high * field[:, -1]
 
         for n, rv in enumerate(resvecs.T):
+            diagb = lxab[1]
             tbc_x_low = self.__class__.calc_tbc(field[1, n], field[0, n])
             tbc_x_high = self.__class__.calc_tbc(field[-2, n], field[-1, n])
-            lxab[1, 0] = (self.B + 2.0 * self.Ax) - (self.Ax * tbc_x_low)
-            lxab[1, -1] = (self.B + 2.0 * self.Ax) - (self.Ax * tbc_x_high)
+            diagb[0] = (self.B + 2.0 * self.Ax) - (self.Ax * tbc_x_low)
+            diagb[-1] = (self.B + 2.0 * self.Ax) - (self.Ax * tbc_x_high)
             U = solve_banded((1, 1), lxab, rv)
             tmp_field[:, n] = U
 
@@ -190,10 +191,11 @@ class propagator_tbc:
         resvecs[-1] += self.Ax * tbc_x_high * tmp_field[-1]
 
         for m, rv in enumerate(resvecs):
+            diagb = lyab[1]
             tbc_y_low = self.__class__.calc_tbc(tmp_field[m, 1], tmp_field[m, 0])
             tbc_y_high = self.__class__.calc_tbc(tmp_field[m, -2], tmp_field[m, -1])
-            lyab[1, 0] = (self.B + 2.0 * self.Ay) - (self.Ay * tbc_y_low)
-            lyab[1, -1] = (self.B + 2.0 * self.Ay) - (self.Ay * tbc_y_high)
+            diagb[0] = (self.B + 2.0 * self.Ay) - (self.Ay * tbc_y_low)
+            diagb[-1] = (self.B + 2.0 * self.Ay) - (self.Ay * tbc_y_high)
             U = solve_banded((1, 1), lyab, rv)
             field[m] = U
 
@@ -235,13 +237,13 @@ class propagator_pml:
         diaga = np.insert(diaga, 0, 0.0)
         diagb = self.B - self.Ax * self.b[:, 0]
         diagc = -self.Ax * self.c[:, 0]
-        self.xab = np.matrix([diaga, diagb, diagc])
+        self.xab = np.array([diaga, diagb, diagc])
 
         diaga = -self.Ay * self.d[0, :-1]
         diaga = np.insert(diaga, 0, 0.0)
         diagb = self.B - self.Ay * self.e[0]
         diagc = -self.Ay * self.f[0]
-        self.yab = np.matrix([diaga, diagb, diagc])
+        self.yab = np.array([diaga, diagb, diagc])
 
     @staticmethod
     def calc_sigma(q, qmin, qmax):
