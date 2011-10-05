@@ -88,118 +88,115 @@ def calc_tbc(u1, u2):
     tbc = np.exp(1j * dx * km)
     return tbc
 
-def step_analytic(k, field):
-    return gaussian(lowz + k * dz)
+class propagator_analytic:
+    def step(self, k, field):
+        return gaussian(lowz + k * dz)
 
-def step_reflect(k, field):
-    tmp_field = field.copy()
+class propagator_reflect:
+    def __init__(self):
+        self.A = 1j / (2.0 * K)
+        self.Ax = self.A / dx2
+        self.Ay = self.A / dy2
+        self.B = 2.0 / dz
 
-    A = 1j / (2.0 * K)
-    Ax = A / dx2
-    Ay = A / dy2
-    B = 2.0 / dz
-
-    global xab
-    if k == 1:
         ones = np.ones(countx)
-        diaga = -Ax * ones
-        diagb = (B + 2.0 * Ax) * ones
-        diagc = -Ax * ones
-        xab = np.matrix([diaga, diagb, diagc])
+        diaga = -self.Ax * ones
+        diagb = (self.B + 2.0 * self.Ax) * ones
+        diagc = -self.Ax * ones
+        self.xab = np.matrix([diaga, diagb, diagc])
 
-    lxab = xab
-
-    resvecs = (B - 2.0 * Ay) * field
-    resvecs[:, 1:] += Ay * field[:, :-1]
-    resvecs[:, :-1] += Ay * field[:, 1:]
-
-    for n, rv in enumerate(resvecs.T):
-        U = solve_banded((1, 1), lxab, rv)
-        tmp_field[:, n] = U
-
-    global yab
-    if k == 1:
         ones = np.ones(county)
-        diaga = -Ay * ones
-        diagb = (B + 2.0 * Ay) * ones
-        diagc = -Ay * ones
-        yab = np.matrix([diaga, diagb, diagc])
+        diaga = -self.Ay * ones
+        diagb = (self.B + 2.0 * self.Ay) * ones
+        diagc = -self.Ay * ones
+        self.yab = np.matrix([diaga, diagb, diagc])
 
-    lyab = yab
+    def step(self, k, field):
+        tmp_field = field.copy()
 
-    resvecs = (B - 2.0 * Ax) * tmp_field
-    resvecs[1:] += Ax * tmp_field[:-1]
-    resvecs[:-1] += Ax * tmp_field[1:]
+        lxab = self.xab
 
-    for m, rv in enumerate(resvecs):
-        U = solve_banded((1, 1), lyab, rv)
-        field[m] = U
+        resvecs = (self.B - 2.0 * self.Ay) * field
+        resvecs[:, 1:] += self.Ay * field[:, :-1]
+        resvecs[:, :-1] += self.Ay * field[:, 1:]
 
-    return field
+        for n, rv in enumerate(resvecs.T):
+            U = solve_banded((1, 1), lxab, rv)
+            tmp_field[:, n] = U
 
-def step_tbc(k, field):
-    tmp_field = field.copy()
+        lyab = self.yab
 
-    A = 1j / (2.0 * K)
-    Ax = A / dx2
-    Ay = A / dy2
-    B = 2.0 / dz
+        resvecs = (self.B - 2.0 * self.Ax) * tmp_field
+        resvecs[1:] += self.Ax * tmp_field[:-1]
+        resvecs[:-1] += self.Ax * tmp_field[1:]
 
-    global xab
-    if k == 1:
+        for m, rv in enumerate(resvecs):
+            U = solve_banded((1, 1), lyab, rv)
+            field[m] = U
+
+        return field
+
+class propagator_tbc:
+    def __init__(self):
+        self.A = 1j / (2.0 * K)
+        self.Ax = self.A / dx2
+        self.Ay = self.A / dy2
+        self.B = 2.0 / dz
+
         ones = np.ones(countx)
-        diaga = -Ax * ones
-        diagb = (B + 2.0 * Ax) * ones
-        diagc = -Ax * ones
-        xab = np.matrix([diaga, diagb, diagc])
+        diaga = -self.Ax * ones
+        diagb = (self.B + 2.0 * self.Ax) * ones
+        diagc = -self.Ax * ones
+        self.xab = np.matrix([diaga, diagb, diagc])
 
-    lxab = xab.copy()
-
-    resvecs = (B - 2.0 * Ay) * field
-    resvecs[:, 1:] += Ay * field[:, :-1]
-    resvecs[:, :-1] += Ay * field[:, 1:]
-
-    tbc_y_low = calc_tbc(field[:, 1], field[:, 0])
-    tbc_y_high = calc_tbc(field[:, -2], field[:, -1])
-    resvecs[:, 0] += Ay * tbc_y_low * field[:, 0]
-    resvecs[:, -1] += Ay * tbc_y_high * field[:, -1]
-
-    for n, rv in enumerate(resvecs.T):
-        tbc_x_low = calc_tbc(field[1, n], field[0, n])
-        tbc_x_high = calc_tbc(field[-2, n], field[-1, n])
-        lxab[1, 0] = (B + 2.0 * Ax) - (Ax * tbc_x_low)
-        lxab[1, -1] = (B + 2.0 * Ax) - (Ax * tbc_x_high)
-        U = solve_banded((1, 1), lxab, rv)
-        tmp_field[:, n] = U
-
-    global yab
-    if k == 1:
         ones = np.ones(county)
-        diaga = -Ay * ones
-        diagb = (B + 2.0 * Ay) * ones
-        diagc = -Ay * ones
-        yab = np.matrix([diaga, diagb, diagc])
+        diaga = -self.Ay * ones
+        diagb = (self.B + 2.0 * self.Ay) * ones
+        diagc = -self.Ay * ones
+        self.yab = np.matrix([diaga, diagb, diagc])
 
-    lyab = yab.copy()
+    def step(self, k, field):
+        tmp_field = field.copy()
 
-    resvecs = (B - 2.0 * Ax) * tmp_field
-    resvecs[1:] += Ax * tmp_field[:-1]
-    resvecs[:-1] += Ax * tmp_field[1:]
+        lxab = self.xab.copy()
 
-    tbc_x_low = calc_tbc(tmp_field[1], tmp_field[0])
-    tbc_x_high = calc_tbc(tmp_field[-2], tmp_field[-1])
-    resvecs[0] += Ax * tbc_x_low * tmp_field[0]
-    resvecs[-1] += Ax * tbc_x_high * tmp_field[-1]
+        resvecs = (self.B - 2.0 * self.Ay) * field
+        resvecs[:, 1:] += self.Ay * field[:, :-1]
+        resvecs[:, :-1] += self.Ay * field[:, 1:]
 
-    for m, rv in enumerate(resvecs):
-        tbc_y_low = calc_tbc(tmp_field[m, 1], tmp_field[m, 0])
-        tbc_y_high = calc_tbc(tmp_field[m, -2], tmp_field[m, -1])
-        lyab[1, 0] = (B + 2.0 * Ay) - (Ay * tbc_y_low)
-        lyab[1, -1] = (B + 2.0 * Ay) - (Ay * tbc_y_high)
-        U = solve_banded((1, 1), lyab, rv)
-        field[m] = U
+        tbc_y_low = calc_tbc(field[:, 1], field[:, 0])
+        tbc_y_high = calc_tbc(field[:, -2], field[:, -1])
+        resvecs[:, 0] += self.Ay * tbc_y_low * field[:, 0]
+        resvecs[:, -1] += self.Ay * tbc_y_high * field[:, -1]
 
-    return field
+        for n, rv in enumerate(resvecs.T):
+            tbc_x_low = calc_tbc(field[1, n], field[0, n])
+            tbc_x_high = calc_tbc(field[-2, n], field[-1, n])
+            lxab[1, 0] = (self.B + 2.0 * self.Ax) - (self.Ax * tbc_x_low)
+            lxab[1, -1] = (self.B + 2.0 * self.Ax) - (self.Ax * tbc_x_high)
+            U = solve_banded((1, 1), lxab, rv)
+            tmp_field[:, n] = U
+
+        lyab = self.yab.copy()
+
+        resvecs = (self.B - 2.0 * self.Ax) * tmp_field
+        resvecs[1:] += self.Ax * tmp_field[:-1]
+        resvecs[:-1] += self.Ax * tmp_field[1:]
+
+        tbc_x_low = calc_tbc(tmp_field[1], tmp_field[0])
+        tbc_x_high = calc_tbc(tmp_field[-2], tmp_field[-1])
+        resvecs[0] += self.Ax * tbc_x_low * tmp_field[0]
+        resvecs[-1] += self.Ax * tbc_x_high * tmp_field[-1]
+
+        for m, rv in enumerate(resvecs):
+            tbc_y_low = calc_tbc(tmp_field[m, 1], tmp_field[m, 0])
+            tbc_y_high = calc_tbc(tmp_field[m, -2], tmp_field[m, -1])
+            lyab[1, 0] = (self.B + 2.0 * self.Ay) - (self.Ay * tbc_y_low)
+            lyab[1, -1] = (self.B + 2.0 * self.Ay) - (self.Ay * tbc_y_high)
+            U = solve_banded((1, 1), lyab, rv)
+            field[m] = U
+
+        return field
 
 def init_globals():
     global X, Y, Z
@@ -224,14 +221,14 @@ def init_field():
     field = gaussian(lowz)
     return field
 
-def propagate(method):
-    init_dir(method)
-    step = getattr(sys.modules[__name__], "step_" + method)
+def propagate(name):
+    init_dir(name)
+    propagator = getattr(sys.modules[__name__], "propagator_" + name)()
     vals = np.zeros((countz, countx), np.complex)
     field = init_field()
     vals[0] = field[:, county/2]
     for k in range(1, countz):
-        field = step(k, field)
+        field = propagator.step(k, field)
         vals[k] = field[:, county/2]
 
     fig = plt.figure()
@@ -240,7 +237,7 @@ def propagate(method):
     zx = ZX[::countz_scale, ::countx_scale]
     xz = XZ[::countz_scale, ::countx_scale]
     ax.plot_wireframe(zx, xz, vals)
-    plt.title(method)
+    plt.title(name)
     plt.show()
 
 init_globals()
