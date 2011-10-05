@@ -206,18 +206,6 @@ class propagator_pml:
         self.Ay = self.A / dy2
         self.B = 2.0 / dz
 
-        ones = np.ones(countx)
-        diaga = -self.Ax * ones
-        diagb = (self.B + 2.0 * self.Ax) * ones
-        diagc = -self.Ax * ones
-        self.xab = np.matrix([diaga, diagb, diagc])
-
-        ones = np.ones(county)
-        diaga = -self.Ay * ones
-        diagb = (self.B + 2.0 * self.Ay) * ones
-        diagc = -self.Ay * ones
-        self.yab = np.matrix([diaga, diagb, diagc])
-
         X_pre = np.linspace(lowx - dx/2, highx - dx/2, countx, retstep=False)
         Y_pre = np.linspace(lowy - dy/2, highy - dy/2, county, retstep=False)
         XY_pre, YX_pre = np.meshgrid(X_pre, Y_pre)
@@ -243,6 +231,18 @@ class propagator_pml:
         self.c = 1.0 / ((1.0 + 1j * self.sigmax / omega) * (1.0 + 1j * self.sigmax_post / omega))
         self.b = -(self.a + self.c)
 
+        diaga = -self.Ax * self.a[:-1, 0]
+        diaga = np.insert(diaga, 0, 0.0)
+        diagb = (self.B - self.Ax) * self.b[:, 0]
+        diagc = -self.Ax * self.c[:, 0]
+        self.xab = np.matrix([diaga, diagb, diagc])
+
+        diaga = -self.Ay * self.d[0, :-1]
+        diaga = np.insert(diaga, 0, 0.0)
+        diagb = (self.B - self.Ay) * self.e[0]
+        diagc = -self.Ay * self.f[0]
+        self.yab = np.matrix([diaga, diagb, diagc])
+
     @staticmethod
     def calc_sigma(q, qmin, qmax):
         def calc_pml_depth(q, qmin, qmax):
@@ -266,9 +266,9 @@ class propagator_pml:
 
         lxab = self.xab
 
-        resvecs = (self.B - 2.0 * self.Ay) * field
-        resvecs[:, 1:] += self.Ay * field[:, :-1]
-        resvecs[:, :-1] += self.Ay * field[:, 1:]
+        resvecs = (self.B + self.Ay) * self.e * field
+        resvecs[:, 1:] += self.Ay * self.d[:, 1:] * field[:, :-1]
+        resvecs[:, :-1] += self.Ay * self.f[:, :-1] * field[:, 1:]
 
         for n, rv in enumerate(resvecs.T):
             U = solve_banded((1, 1), lxab, rv)
@@ -276,9 +276,9 @@ class propagator_pml:
 
         lyab = self.yab
 
-        resvecs = (self.B - 2.0 * self.Ax) * tmp_field
-        resvecs[1:] += self.Ax * tmp_field[:-1]
-        resvecs[:-1] += self.Ax * tmp_field[1:]
+        resvecs = (self.B + self.Ax) * self.b * tmp_field
+        resvecs[1:] += self.Ax * self.a[1:] * tmp_field[:-1]
+        resvecs[:-1] += self.Ax * self.c[:-1] * tmp_field[1:]
 
         for m, rv in enumerate(resvecs):
             U = solve_banded((1, 1), lyab, rv)
@@ -333,3 +333,4 @@ init_dir()
 propagate("analytic")
 propagate("reflect")
 propagate("tbc")
+propagate("pml")
