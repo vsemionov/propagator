@@ -233,13 +233,13 @@ class propagator_pml:
 
         diaga = -self.Ax * self.a[:-1, 0]
         diaga = np.insert(diaga, 0, 0.0)
-        diagb = (self.B - self.Ax) * self.b[:, 0]
+        diagb = self.B - self.Ax * self.b[:, 0]
         diagc = -self.Ax * self.c[:, 0]
         self.xab = np.matrix([diaga, diagb, diagc])
 
         diaga = -self.Ay * self.d[0, :-1]
         diaga = np.insert(diaga, 0, 0.0)
-        diagb = (self.B - self.Ay) * self.e[0]
+        diagb = self.B - self.Ay * self.e[0]
         diagc = -self.Ay * self.f[0]
         self.yab = np.matrix([diaga, diagb, diagc])
 
@@ -266,7 +266,7 @@ class propagator_pml:
 
         lxab = self.xab
 
-        resvecs = (self.B + self.Ay) * self.e * field
+        resvecs = self.B + self.Ay * self.e * field
         resvecs[:, 1:] += self.Ay * self.d[:, 1:] * field[:, :-1]
         resvecs[:, :-1] += self.Ay * self.f[:, :-1] * field[:, 1:]
 
@@ -276,7 +276,7 @@ class propagator_pml:
 
         lyab = self.yab
 
-        resvecs = (self.B + self.Ax) * self.b * tmp_field
+        resvecs = self.B + self.Ax * self.b * tmp_field
         resvecs[1:] += self.Ax * self.a[1:] * tmp_field[:-1]
         resvecs[:-1] += self.Ax * self.c[:-1] * tmp_field[1:]
 
